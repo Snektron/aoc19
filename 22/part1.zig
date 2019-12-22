@@ -1,75 +1,61 @@
 const std = @import("std");
 
 const input = std.mem.trim(u8, @embedFile("input.txt"), "\n");
+const deck_size = 119315717514047;
+const iterations = 101741582076661;
 
-fn dealIntoNewStack(arr: []i64) void {
-    std.mem.reverse(i64, arr);
-}
+const LinearMap = struct {
+    a: i64,
+    b: i64,
 
-fn cut(arr: []i64, n: i64) void {
-    var tmp: [10007]i64 = undefined;
-
-    const m = if (n < 0) arr.len - @intCast(usize, -n) else @intCast(usize, n);
-
-    var i: usize = 0;
-    while (i < arr.len - m) : (i += 1) {
-        tmp[i] = arr[i + m];
+    fn combine(self: *LinearMap, other: LinearMap) void {
+        self.a *= other.a;
+        self.b = other.a * self.b + other.b;
     }
 
-    while (i < arr.len) : (i += 1) {
-        tmp[i] = arr[i - (arr.len - m)];
+    fn y(self: LinearMap, x: i64, m: i64) i64 {
+        return @mod(self.a * x + self.b, m);
     }
+};
 
-    std.mem.copy(i64, arr, tmp[0 .. arr.len]);
-}
-
-fn deal(arr: []i64, incr: usize) void {
-    var tmp: [10007]i64 = undefined;
-    var i: usize = 0;
-    var j: usize = 0;
-
-    while (i < arr.len) {
-        tmp[@mod(j, arr.len)] = arr[i];
-        j += incr;
-        i += 1;
-    }
-
-    std.mem.copy(i64, arr, tmp[0 .. arr.len]);
-}
-
-fn dump(a: []i64) void {
-    for (a) |x| {
-        std.debug.warn("{} ", .{x});
-    }
-
-    std.debug.warn("\n", .{});
-}
-
-pub fn main() !void {
-    const n = 10007;
-    var deck: [n]i64 = undefined;
-
-    var i: usize = 0;
-    while (i < n) : (i += 1) {
-        deck[i] = @intCast(i64, i);
-    }
+fn stepOnTheBeach(start_index: usize, n: usize) !usize {
+    var index = start_index;
 
     var it = std.mem.separate(input, "\n");
     while (it.next()) |line| {
         if (std.mem.startsWith(u8, line, "cut")) {
-            cut(&deck, try std.fmt.parseInt(i64, line["cut ".len ..], 10));
+            const amount = try std.fmt.parseInt(i64, line["cut ".len ..], 10);
+            const m = if (amount < 0) n - @intCast(usize, -amount) else @intCast(usize, amount);
+
+            if (index < m) {
+                index += n - m;
+            } else {
+                index -= m;
+            }
+
+            // index = @mod(index + amount, n);
         } else if (std.mem.startsWith(u8, line, "deal with increment")) {
-            deal(&deck, try std.fmt.parseInt(usize, line["deal with increment ".len ..], 10));
+            const increment = try std.fmt.parseInt(usize, line["deal with increment ".len ..], 10);
+            // std.debug.warn("oef {}\n", .{increment});
+            const old = index;
+            index = @mod(index * increment, n);
+
+            // const a = @mod(@intCast(i64, index) * -@intCast(i64, increment), @intCast(i64, n));
+            std.debug.warn("{} {} | {} {}\n", .{increment, index, old, j});
+
         } else if (std.mem.eql(u8, "deal into new stack", line)) {
-            dealIntoNewStack(&deck);
+            index = n - index - 1;
+            //index = @mod(-index - 1, n);
         } else {
             return error.InvalidOperation;
         }
     }
 
-    for (deck) |card, k| {
-        if (card == 2019) {
-            std.debug.warn("{}\n", .{k});
-        }
-    }
+    return index;
+}
+
+pub fn main() !void {
+    const n = 10007;
+    var index: usize = 2019;
+    std.debug.warn("Final index of {}: {}\n", .{index, try stepOnTheBeach(index, n)});
 }
